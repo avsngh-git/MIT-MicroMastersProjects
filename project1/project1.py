@@ -1,6 +1,7 @@
 from string import punctuation, digits
 import numpy as np
 import random
+import math
 
 
 
@@ -75,8 +76,8 @@ def hinge_loss_full(feature_matrix, labels, theta, theta_0):
 def perceptron_single_step_update(
         feature_vector,
         label,
-        current_theta,
-        current_theta_0):
+        current_theta=0,
+        current_theta_0=0):
     """
     Updates the classification parameters `theta` and `theta_0` via a single
     step of the perceptron algorithm.  Returns new parameters rather than
@@ -94,6 +95,14 @@ def perceptron_single_step_update(
         the updated offset parameter `theta_0` as a floating point number
     """
     # Your code here
+    z = label*(np.dot(current_theta, feature_vector)+current_theta_0)
+    if z<=0:
+        theta = current_theta+(label*feature_vector)
+        theta_0 = current_theta_0 + label
+    else:
+        theta = current_theta
+        theta_0 = current_theta_0
+    return (theta, theta_0)
     raise NotImplementedError
 
 
@@ -121,12 +130,16 @@ def perceptron(feature_matrix, labels, T):
             (found also after T iterations through the feature matrix).
     """
     # Your code here
-    raise NotImplementedError
+    nsamples = np.size(feature_matrix, 0)
+    param_size = np.size(feature_matrix, 1)
+    current_theta = np.zeros(param_size)
+    current_theta_0 = 0
     for t in range(T):
         for i in get_order(nsamples):
-            # Your code here
-            raise NotImplementedError
-    # Your code here
+            thetas= perceptron_single_step_update(feature_matrix[i], label=labels[i], current_theta=current_theta, current_theta_0=current_theta_0)
+            current_theta=thetas[0]
+            current_theta_0=thetas[1]
+    return (current_theta, current_theta_0)
     raise NotImplementedError
 
 
@@ -158,16 +171,26 @@ def average_perceptron(feature_matrix, labels, T):
             (averaged also over T iterations through the feature matrix).
     """
     # Your code here
+    nsamples = np.size(feature_matrix, 0)
+    param_size = np.size(feature_matrix, 1)
+    current_theta = np.zeros(param_size)
+    current_theta_0 = 0
+    theta_sum = np.zeros(param_size)
+    theta_0_sum = 0
+    for t in range(T):
+        for i in get_order(nsamples):
+            thetas= perceptron_single_step_update(feature_matrix[i], label=labels[i], current_theta=current_theta, current_theta_0=current_theta_0)
+            current_theta=thetas[0]
+            current_theta_0=thetas[1]
+            theta_sum += current_theta
+            theta_0_sum += current_theta_0
+    return (theta_sum/(nsamples*T), theta_0_sum/(nsamples*T))
     raise NotImplementedError
 
 
 def pegasos_single_step_update(
-        feature_vector,
-        label,
-        L,
-        eta,
-        theta,
-        theta_0):
+        feature_vector, label,
+        L, eta, theta, theta_0):
     """
     Updates the classification parameters `theta` and `theta_0` via a single
     step of the Pegasos algorithm.  Returns new parameters rather than
@@ -189,6 +212,13 @@ def pegasos_single_step_update(
         completed.
     """
     # Your code here
+    if label*(np.dot(feature_vector, theta)+theta_0)<=1:
+        theta = (1-eta*L)*theta+eta*label*feature_vector
+        theta_0 = theta_0+label*eta
+    else:
+        theta = (1-eta*L)*theta
+        theta_0 = theta_0
+    return (theta, theta_0)
     raise NotImplementedError
 
 
@@ -221,6 +251,21 @@ def pegasos(feature_matrix, labels, T, L):
         after T iterations through the feature matrix.
     """
     # Your code here
+    nsamples = np.size(feature_matrix, 0)
+    param_size = np.size(feature_matrix, 1)
+    curr_theta = np.zeros(param_size)
+    curr_theta_0 = 0
+    t = 1 
+    for a in range(T):
+        for i in get_order(nsamples):
+            eta = 1/np.sqrt(t)
+            thetas = pegasos_single_step_update(feature_vector=feature_matrix[i], label=labels[i], L=L, eta=eta, theta=curr_theta, theta_0=curr_theta_0)
+            curr_theta=thetas[0]
+            curr_theta_0=thetas[1]
+            t+=1
+    return (curr_theta, curr_theta_0)
+            
+    
     raise NotImplementedError
 
 
@@ -258,6 +303,9 @@ def classify(feature_matrix, theta, theta_0):
         should be considered a positive classification.
     """
     # Your code here
+    prediction = np.dot(feature_matrix, theta)+theta_0
+    prediction = np.where(prediction>np.finfo(float).eps, 1.0, -1.0)
+    return prediction
     raise NotImplementedError
 
 
@@ -295,6 +343,14 @@ def classifier_accuracy(
         accuracy of the trained classifier on the validation data.
     """
     # Your code here
+    theta, theta_0 = classifier(train_feature_matrix, train_labels,**kwargs)
+    train_preds = classify(train_feature_matrix, theta, theta_0)
+    train_accuracy = accuracy(train_preds, train_labels)
+    
+    val_preds = classify(val_feature_matrix, theta, theta_0)
+    val_accuracy = accuracy(val_preds, val_labels)
+    return (train_accuracy, val_accuracy)
+    
     raise NotImplementedError
 
 
@@ -309,7 +365,7 @@ def extract_words(text):
         count as their own words.
     """
     # Your code here
-    raise NotImplementedError
+    # raise NotImplementedError
 
     for c in punctuation + digits:
         text = text.replace(c, ' ' + c + ' ')
@@ -329,14 +385,14 @@ def bag_of_words(texts, remove_stopword=False):
         integer `index`.
     """
     # Your code here
-    raise NotImplementedError
+    # raise NotImplementedError
     
     indices_by_word = {}  # maps word to unique index
     for text in texts:
         word_list = extract_words(text)
         for word in word_list:
             if word in indices_by_word: continue
-            if word in stopword: continue
+            #if word in stopword: continue
             indices_by_word[word] = len(indices_by_word)
 
     return indices_by_word
@@ -359,10 +415,14 @@ def extract_bow_feature_vectors(reviews, indices_by_word, binarize=True):
         word_list = extract_words(text)
         for word in word_list:
             if word not in indices_by_word: continue
-            feature_matrix[i, indices_by_word[word]] += 1
-    if binarize:
-        # Your code here
-        raise NotImplementedError
+
+            if binarize == False:
+               #### The 'pass' here is a place holder. You will modify this part of 
+               #### the code in Part 9 of theproject 
+               pass
+            else:
+               feature_matrix[i, indices_by_word[word]] = 1
+
     return feature_matrix
 
 
