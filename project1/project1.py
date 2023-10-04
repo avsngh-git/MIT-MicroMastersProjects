@@ -386,20 +386,20 @@ def bag_of_words(texts, remove_stopword=False):
     """
     # Your code here
     # raise NotImplementedError
-    
+    stopword = stopwords('stopwords.txt')
     indices_by_word = {}  # maps word to unique index
     for text in texts:
         word_list = extract_words(text)
         for word in word_list:
             if word in indices_by_word: continue
-            #if word in stopword: continue
+            if word in stopword: continue
             indices_by_word[word] = len(indices_by_word)
 
     return indices_by_word
 
 
 
-def extract_bow_feature_vectors(reviews, indices_by_word, binarize=True):
+def extract_bow_feature_vectors(reviews, indices_by_word, binarize=False):
     """
     Args:
         `reviews` - a list of natural language strings
@@ -419,7 +419,7 @@ def extract_bow_feature_vectors(reviews, indices_by_word, binarize=True):
             if binarize == False:
                #### The 'pass' here is a place holder. You will modify this part of 
                #### the code in Part 9 of theproject 
-               pass
+               feature_matrix[i, indices_by_word[word]] +=1
             else:
                feature_matrix[i, indices_by_word[word]] = 1
 
@@ -433,3 +433,19 @@ def accuracy(preds, targets):
     returns the fraction of predictions that are correct.
     """
     return (preds == targets).mean()
+
+def stopwords(address):
+    with open(address, 'r') as file:
+    # Create an empty list to store the lines
+        lines = []
+
+    # Iterate over the lines of the file
+        for line in file:
+        # Remove the newline character at the end of the line
+            line = line.strip()
+
+        # Append the line to the list
+            lines.append(line)
+
+# Print the list of lines
+    return lines
